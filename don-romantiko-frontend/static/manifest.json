@@ -1,0 +1,19 @@
+{
+  "name": "Don Romantiko - Unlimited Samgyeopsal POS",
+  "short_name": "Don Romantiko POS",
+  "description": "Point-of-Sale System for Don Romantiko Unlimited Samgyeopsal with Offline Sync",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#f8fafc",
+  "theme_color": "#c21d24",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

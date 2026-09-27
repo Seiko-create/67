@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="110" fill="#c21d24" />
+  <circle cx="256" cy="256" r="190" fill="#ffffff" />
+  <g transform="translate(136, 126) scale(0.47)">
+    <!-- Cute Pig Icon Graphic matching brand -->
+    <ellipse cx="256" cy="260" rx="190" ry="170" fill="#fbcfe8" stroke="#be185d" stroke-width="14"/>
+    <!-- Ears -->
+    <path d="M 120 130 C 90 70, 160 30, 200 90 Z" fill="#f472b6" stroke="#be185d" stroke-width="12"/>
+    <path d="M 392 130 C 422 70, 352 30, 312 90 Z" fill="#f472b6" stroke="#be185d" stroke-width="12"/>
+    <!-- Eyes -->
+    <ellipse cx="180" cy="220" rx="18" ry="24" fill="#1e293b"/>
+    <ellipse cx="332" cy="220" rx="18" ry="24" fill="#1e293b"/>
+    <circle cx="186" cy="212" r="7" fill="#ffffff"/>
+    <circle cx="338" cy="212" r="7" fill="#ffffff"/>
+    <!-- Snout -->
+    <ellipse cx="256" cy="290" rx="80" ry="55" fill="#f472b6" stroke="#be185d" stroke-width="12"/>
+    <ellipse cx="225" cy="290" rx="16" ry="24" fill="#9d174d"/>
+    <ellipse cx="287" cy="290" rx="16" ry="24" fill="#9d174d"/>
+    <!-- Cheeks -->
+    <circle cx="130" cy="280" r="22" fill="#fda4af" opacity="0.7"/>
+    <circle cx="382" cy="280" r="22" fill="#fda4af" opacity="0.7"/>
+  </g>
+</svg>

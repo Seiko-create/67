@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#c21d24">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Don Romantiko">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <title>Don Romantiko - POS System</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <section class="login-screen" id="login-screen">
+    <div class="login-panel">
+      <div class="brand-logo">🐷</div>
+      <h1>DON ROMANTIKO</h1>
+      <p>Point-of-Sale Login</p>
+      <div class="login-server-note">
+        <strong>Server required</strong>
+        <span>Start <b>start.bat</b> and keep the server window open.</span>
+        <span>Address: <b>http://localhost:5000</b></span>
+      </div>
+      <form id="login-form">
+        <label for="login-username">Username</label>
+        <input type="text" id="login-username" autocomplete="username" required>
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" autocomplete="current-password" minlength="8" required>
+        <button class="btn btn-primary" type="submit">Sign In</button>
+        <button class="btn btn-secondary login-retry" id="login-retry" type="button">Retry Connection</button>
+        <div class="login-error" id="login-error" role="alert"></div>
+      </form>
+    </div>
+  </section>
+  <div class="pos-app">
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+      <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="brand">
+        <div class="brand-logo">🐷</div>
+        <div class="brand-text">
+          <h1>DON ROMANTIKO</h1>
+          <span class="sub-brand">UNLIMITED SAMGYEOPSAL POS</span>
+        </div>
+      </div>
+
+      <nav class="nav-tabs side-menu" id="side-menu" aria-label="Main navigation">
+        <button class="nav-tab active" data-tab="active-tables-tab">
+          <span class="tab-icon">🪑</span>
+          <span class="tab-label">Active Tables</span>
+          <span class="badge" id="active-tables-badge">0</span>
+        </button>
+        <button class="nav-tab" data-tab="cashier-tab">
+          <span class="tab-icon">🛒</span>
+          <span class="tab-label">Cashier & Orders</span>
+        </button>
+        <button class="nav-tab" data-tab="dispatcher-tab">
+          <span class="tab-icon">🥩</span>
+          <span class="tab-label">Meat Dispatcher</span>
+          <span class="badge" id="dispatcher-badge">0</span>
+        </button>
+        <button class="nav-tab" data-tab="sales-tab">
+          <span class="tab-icon">📊</span>
+          <span class="tab-label">Sales & Reports</span>
+        </button>
+        <button class="nav-tab" data-tab="manage-menu-tab">
+          <span class="tab-icon">⚙️</span>
+          <span class="tab-label">Menu &amp; Inventory</span>
+        </button>
+        <div class="side-menu-footer">
+          <button class="btn btn-secondary side-menu-btn" id="btn-open-change-pwd-modal">🔑 Change Password</button>
+          <button class="btn btn-admin-auth side-menu-btn" id="btn-admin-auth">🔒 Unlock Admin</button>
+        </div>
+      </nav>
+      <div class="menu-overlay" id="menu-overlay"></div>
+
+      <div class="header-status">
+        <div class="system-time" id="live-clock">--:--:--</div>
+        <div class="logged-in-user" id="logged-in-user"></div>
+        <span class="mode-badge staff-badge" id="mode-badge">👷 Staff Mode</span>
+        <button class="btn btn-outline-danger btn-sm" id="btn-logout">Log out</button>
+        <button class="sync-badge-btn" id="btn-sync-offline" style="display: none;" title="Click to sync offline orders">
+          ⚡ <span id="unsynced-count">0</span> to sync
+        </button>
+        <div class="status-indicator" id="network-status-indicator">
+          <span class="dot"></span> <span id="network-status-text">Online</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+      <!-- ================= SECTION 1: CASHIER & ORDER ENTRY ================= -->
+      <section id="cashier-tab" class="tab-view">
+        <!-- Order Header Setup Bar -->
+        <div class="order-meta-bar">
+          <div class="meta-field">
+            <label for="table-input">Table No. <span class="table-status-indicator" id="table-status-indicator"></span></label>
+            <div class="table-number-spinner">
+              <button type="button" class="table-spinner-btn" id="table-number-down" aria-label="Previous table">-</button>
+              <input type="number" id="table-input" min="1" step="1" value="1" aria-label="Selected table number">
+              <button type="button" class="table-spinner-btn" id="table-number-up" aria-label="Next table">+</button>
+            </div>
+          </div>
+
+          <div class="meta-field waiter-field">
+            <label for="waiter-input">Waiter / Server</label>
+            <input type="text" id="waiter-input" placeholder="Logged-in account" value="Staff" readonly>
+          </div>
+
+          <div class="meta-field">
+            <label for="customer-input">Customer Note</label>
+            <input type="text" id="customer-input" placeholder="Optional (e.g. Romantiko)">
+          </div>
+
+          <div class="meta-actions">
+            <div class="current-order-tag" id="current-slip-tag">New Draft</div>
+            <button class="btn btn-primary btn-sm" id="btn-open-table" title="Open this table before adding items">
+              🪑 Open Table
+            </button>
+            <button class="btn btn-outline-danger btn-sm" id="btn-new-order" title="Clear current form">
+              🔄 New / Clear
+            </button>
+          </div>
+        </div>
+
+        <!-- Split Screen: Left Catalog & Right Order Slip -->
+        <div class="pos-split-layout">
+          
+          <!-- LEFT: Menu & Catalog -->
+          <div class="catalog-panel kiosk-catalog">
+            <!-- Category Tabs -->
+            <div class="category-tabs" id="category-tabs">
+              <button class="cat-btn active" data-category="ALL">🌟 All Items</button>
+              <button class="cat-btn" data-category="UNLIMITED">🥩 UNLIMITED</button>
+              <button class="cat-btn" data-category="CHICKEN WINGS">🍗 CHICKEN WINGS</button>
+              <button class="cat-btn" data-category="VALUE MEAL">🍱 VALUE MEAL</button>
+              <button class="cat-btn" data-category="ALA CARTE / DRINKS / OTHERS">🍹 ALA CARTE & DRINKS</button>
+              <button class="cat-btn" data-category="LEFTOVER CHARGES">⚠️ LEFTOVER CHARGES</button>
+            </div>
+
+            <!-- Item Search -->
+            <div class="catalog-search-bar">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="item-search" placeholder="Search menu item (e.g. Jowls, Wings, Leftover, Ramen, Coke)...">
+            </div>
+
+            <!-- Menu Grid -->
+            <div class="menu-grid" id="menu-grid">
+              <!-- Menu items populated dynamically via JS from DB -->
+            </div>
+          </div>
+
+          <!-- RIGHT: Live Physical-Style Order Slip Panel -->
+          <div class="order-slip-panel">
+            <div class="slip-container" id="printable-slip">
+              <!-- Order Slip Header -->
+              <div class="slip-header">
+                <div class="slip-brand">
+                  <span class="slip-pig">🐷</span>
+                  <div class="slip-brand-title">DON ROMANTIKO</div>
+                  <div class="slip-brand-sub">UNLIMITED SAMGYEOPSAL</div>
+                </div>
+                <div class="slip-title-row">
+                  <span class="slip-title">ORDER SLIP</span>
+                  <span class="slip-no" id="slip-display-no">New Draft</span>
+                </div>
+                <div class="slip-meta-grid">
+                  <div><strong>Table No.:</strong> <span id="slip-table-val">Table 1</span></div>
+                  <div><strong>Date:</strong> <span id="slip-date-val">--</span></div>
+                  <div><strong>Waiter:</strong> <span id="slip-waiter-val">Staff</span></div>
+                  <div><strong>Time:</strong> <span id="slip-time-val">--:--</span></div>
+                </div>
+                <div class="dining-window-badge" id="slip-window-badge" style="display: none;">
+                  ⏱️ <strong>2-Hour Window:</strong> <span id="slip-start-time">--</span> - <span id="slip-end-time">--</span>
+                </div>
+              </div>
+
+              <!-- Slip Body Line Items -->
+              <div class="slip-body">
+                <!-- Section 1: Unlimited Package -->
+                <div class="slip-section" id="slip-unli-section">
+                  <div class="slip-section-heading">UNLIMITED PLAN</div>
+                  <div id="slip-unli-content">
+                    <div class="empty-unli-hint">👉 Click any UNLIMITED plan from the menu to set up PAX</div>
+                  </div>
+                </div>
+
+                <!-- Section 2: Add-ons, Ala Carte & Leftovers -->
+                <div class="slip-section" id="slip-addons-section">
+                  <div class="slip-section-heading">ADD-ONS, DRINKS & CHARGES</div>
+                  <div class="slip-items-list" id="slip-items-list">
+                    <div class="empty-addons-hint">No extra items added yet</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Slip Calculation & Summary -->
+              <div class="slip-footer">
+                <div class="slip-calc-row">
+                  <span>Gross Total</span>
+                  <span id="slip-gross-total">₱0.00</span>
+                </div>
+                <div class="slip-calc-row paid-row" id="slip-paid-row" style="display: none;">
+                  <span>Less: Previously Paid</span>
+                  <span class="text-success" id="slip-amount-paid">-₱0.00</span>
+                </div>
+                <div class="slip-calc-row total-row">
+                  <span id="slip-balance-label">BALANCE DUE:</span>
+                  <span class="slip-total-amount" id="slip-balance-due">₱0.00</span>
+                </div>
+                <div class="order-status-tag" id="slip-status-tag">STATUS: NEW DRAFT</div>
+              </div>
+            </div>
+
+            <!-- Action Buttons Bar -->
+            <div class="slip-actions">
+              <button class="btn btn-warning" id="btn-hold-order">
+                <span class="btn-icon">⏸️</span>
+                <span>SAVE TABLE</span>
+              </button>
+              <button class="btn btn-secondary" id="btn-print-slip">
+                <span class="btn-icon">🖨️</span>
+                <span>Print Slip</span>
+              </button>
+              <button class="btn btn-success btn-lg" id="btn-proceed-pay">
+                <span class="btn-icon">💳</span>
+                <span>PAY / SETTLE</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= SECTION 2: ACTIVE TABLES (HELD ORDERS) ================= -->
+      <section id="active-tables-tab" class="tab-view active">
+        <div class="section-header">
+            <div>
+              <h2>Active Dining Tables</h2>
+              <p class="text-muted">Track ongoing dining sessions, 2-hour limits, and add extra items to existing slips.</p>
+            </div>
+            <div class="section-header-actions">
+              <button class="btn btn-primary" id="btn-add-table">➕ Add Table</button>
+              <button class="btn btn-secondary" id="btn-refresh-tables">🔄 Refresh Tables</button>
+            </div>
+        </div>
+
+        <div class="active-tables-grid" id="active-tables-grid">
+          <!-- Active table cards rendered dynamically -->
+        </div>
+      </section>
+
+      <!-- ================= SECTION 3: MEAT DISPATCHER (KITCHEN DISPATCH) ================= -->
+      <section id="dispatcher-tab" class="tab-view">
+        <div class="section-header">
+          <div>
+            <h2>🥩 Kitchen &amp; Meat Dispatcher</h2>
+            <p class="text-muted">Dedicated workstation for meat refilling. One-tap plate logging (0.20 kg / plate) per active dining table.</p>
+          </div>
+          <div class="section-header-actions" style="display: flex; gap: 0.5rem; align-items: center;">
+            <input type="date" id="dispatcher-date-picker" class="scope-select" style="min-width: 140px; padding: 0.35rem 0.6rem;" title="Filter meat consumption by date">
+            <button class="btn btn-secondary" id="btn-refresh-dispatcher">🔄 Refresh Tables</button>
+          </div>
+        </div>
+
+        <div class="dispatcher-grid" id="dispatcher-grid" style="margin-bottom: 2rem;">
+          <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- Meat Refill & Consumption Monitor (Tied to Date) -->
+        <div class="menu-admin-card">
+          <div class="card-title-row">
+            <div class="card-title">📊 Total Meat Consumption &amp; Refills Summary</div>
+            <span class="badge" style="background:#fee2e2; color:#991b1b; font-weight:700;" id="dispatcher-date-tag">Date: Today</span>
+          </div>
+          <div class="table-responsive">
+            <table class="sales-table admin-table">
+              <thead>
+                <tr>
+                  <th>Meat Type</th>
+                  <th>Total Plates Served</th>
+                  <th>Total Consumed (kg)</th>
+                  <th>Total Consumed (grams)</th>
+                  <th>Portions Equivalent</th>
+                </tr>
+              </thead>
+              <tbody id="dispatcher-meat-summary-body">
+                <!-- Populated dynamically via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION 4: SALES & RECORDS ================= -->
+      <section id="sales-tab" class="tab-view">
+        <div class="section-header">
+          <div>
+            <h2>Sales &amp; Reports</h2>
+            <p class="text-muted">Accessible to staff &amp; admin. Filter sales by Daily, Weekly, Monthly, or Shift.</p>
+          </div>
+          <div class="sales-actions-group">
+            <div class="timeframe-pills" id="timeframe-pills">
+              <button type="button" class="timeframe-btn active" data-timeframe="daily">📅 Today</button>
+              <button type="button" class="timeframe-btn" data-timeframe="weekly">📆 This Week</button>
+              <button type="button" class="timeframe-btn" data-timeframe="monthly">🗓️ This Month</button>
+              <button type="button" class="timeframe-btn" data-timeframe="current">📋 Current Shift</button>
+              <button type="button" class="timeframe-btn" data-timeframe="all">🗂️ All Time</button>
+            </div>
+            <input type="date" id="sales-date-picker" class="scope-select" style="min-width: 140px; padding: 0.35rem 0.6rem;" title="Filter by exact date">
+            <button class="btn btn-primary" id="btn-refresh-sales">🔄 Refresh</button>
+            <button class="btn btn-warning" id="btn-do-cutoff" title="Archive current shift sales and reset shift">✂️ Shift Cut-off</button>
+            <button class="btn btn-success" id="btn-export-sales" title="Download spreadsheet">📥 Export CSV</button>
+          </div>
+        </div>
+
+        <!-- KPI Metric Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-content">
+              <span class="kpi-label">Gross Revenue</span>
+              <span class="kpi-value" id="kpi-revenue">₱0.00</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon">👥</div>
+            <div class="kpi-content">
+              <span class="kpi-label">Total PAX Served</span>
+              <span class="kpi-value" id="kpi-pax">0</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon">🧾</div>
+            <div class="kpi-content">
+              <span class="kpi-label">Orders Completed</span>
+              <span class="kpi-value" id="kpi-orders">0</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon">📈</div>
+            <div class="kpi-content">
+              <span class="kpi-label">Avg. Ticket Size</span>
+              <span class="kpi-value" id="kpi-avg">₱0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Simplified 2-Column Goods Sold Table -->
+        <div class="sales-table-card" style="margin-bottom: 1.5rem;">
+          <div class="card-title-row">
+            <div class="card-title">📦 Goods &amp; Products Sold Summary</div>
+            <span class="badge" style="background:#ecfdf5; color:#047857; font-weight:700;" id="sales-period-tag">Period: Today</span>
+          </div>
+          <div class="table-responsive">
+            <table class="sales-table simple-goods-table">
+              <thead>
+                <tr>
+                  <th style="width: 70%;">Product / Plan Name</th>
+                  <th style="width: 30%; text-align: right;">Quantity Sold</th>
+                </tr>
+              </thead>
+              <tbody id="sold-goods-table-body">
+                <tr>
+                  <td colspan="2" class="text-center text-muted">No sales recorded for this timeframe.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Completed Sales Table (Receipts History) -->
+        <div class="sales-table-card">
+          <div class="card-title">Completed Receipts &amp; Transactions</div>
+          <div class="table-responsive">
+            <table class="sales-table">
+              <thead>
+                <tr>
+                  <th>Receipt #</th>
+                  <th>Table</th>
+                  <th>Waiter</th>
+                  <th>PAX</th>
+                  <th>Items Summary</th>
+                  <th>Amount Paid</th>
+                  <th>Paid At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="sales-table-body">
+                <tr>
+                  <td colspan="8" class="text-center text-muted">No completed transactions recorded yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION 5: MENU & INVENTORY (ADMIN ONLY) ================= -->
+      <section id="manage-menu-tab" class="tab-view">
+        <div class="section-header">
+          <div>
+            <h2>Menu &amp; Inventory Management</h2>
+            <p class="text-muted">Admin-protected area. Manage product prices, raw materials, inventory, and staff accounts.</p>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-success" id="btn-open-stock-modal">📦 Add / Adjust Stock</button>
+            <button class="btn btn-primary" id="btn-open-add-item-modal">➕ Add Menu Item</button>
+          </div>
+        </div>
+
+        <!-- Inventory Stock Card (Grouped by Category) -->
+        <div class="menu-admin-card" style="margin-bottom: 1.5rem;">
+          <div class="card-title-row">
+            <div class="card-title">📦 Raw Materials, Ingredients &amp; Product Stocks</div>
+            <span class="badge" style="background:#dbeafe; color:#1e40af; font-weight:700;">Grouped by Category</span>
+          </div>
+          <div id="inventory-groups-container">
+            <!-- Grouped category tables rendered dynamically via JS -->
+          </div>
+        </div>
+
+        <!-- Menu Catalog Editor (Admin Only) -->
+        <div class="menu-admin-card">
+          <div class="card-title-row">
+            <div class="card-title">🍽️ Menu Items &amp; Pricing (Admin Protected)</div>
+          </div>
+          <div class="category-tabs" id="admin-category-tabs" style="margin-bottom: 1rem;">
+            <button class="cat-btn active" data-admin-cat="ALL">🌟 All Items</button>
+            <button class="cat-btn" data-admin-cat="UNLIMITED">🥩 UNLIMITED</button>
+            <button class="cat-btn" data-admin-cat="CHICKEN WINGS">🍗 CHICKEN WINGS</button>
+            <button class="cat-btn" data-admin-cat="VALUE MEAL">🍱 VALUE MEAL</button>
+            <button class="cat-btn" data-admin-cat="ALA CARTE / DRINKS / OTHERS">🍹 ALA CARTE & DRINKS</button>
+            <button class="cat-btn" data-admin-cat="LEFTOVER CHARGES">⚠️ LEFTOVER CHARGES</button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="sales-table admin-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Item Name</th>
+                  <th>Category</th>
+                  <th>Type</th>
+                  <th>Price (₱)</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="admin-menu-table-body">
+                <!-- Populated dynamically via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Account Management (Admin Only) -->
+        <div class="account-admin-card" style="margin-top: 1.5rem;">
+          <div class="section-header">
+            <div>
+              <h2>Account Management</h2>
+              <p class="text-muted">Only administrators can create or delete employee and higher-up accounts.</p>
+            </div>
+          </div>
+          <form class="account-form" id="account-form">
+            <input type="text" id="account-full-name" placeholder="Full name" required>
+            <input type="text" id="account-username" placeholder="Username" required>
+            <input type="password" id="account-password" placeholder="Password (minimum 8 characters)" minlength="8" required>
+            <select id="account-type">
+              <option value="employee">Employee / Staff</option>
+              <option value="higher_up">Higher Up / Admin</option>
+            </select>
+            <button class="btn btn-primary" type="submit">Create Account</button>
+          </form>
+          <div class="table-responsive">
+            <table class="sales-table admin-table">
+              <thead><tr><th>Name</th><th>Username</th><th>Type</th><th>Status</th><th>Action</th></tr></thead>
+              <tbody id="accounts-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- Modal 1: Select Unli Plan & PAX Count -->
+    <div class="modal-overlay" id="unli-pax-modal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="modal-unli-title">Setup Unlimited Plan</h3>
+          <button class="modal-close" id="btn-close-pax-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="plan-preview-box">
+            <div class="plan-name-preview" id="modal-plan-name">UNLI JOWLS</div>
+            <div class="plan-rate-preview" id="modal-plan-rate">₱228 / person</div>
+          </div>
+
+          <div class="pax-selector-group">
+            <label>Number of PAX (Customers):</label>
+            <div class="pax-counter-control">
+              <button type="button" class="btn-qty" id="pax-minus">-</button>
+              <input type="number" id="pax-input" value="4" min="1" max="100">
+              <button type="button" class="btn-qty" id="pax-plus">+</button>
+            </div>
+            <div class="quick-pax-buttons">
+              <button type="button" class="pax-chip" data-pax="1">1</button>
+              <button type="button" class="pax-chip" data-pax="2">2</button>
+              <button type="button" class="pax-chip" data-pax="4">4</button>
+              <button type="button" class="pax-chip" data-pax="5">5</button>
+              <button type="button" class="pax-chip" data-pax="6">6</button>
+              <button type="button" class="pax-chip" data-pax="8">8</button>
+              <button type="button" class="pax-chip" data-pax="10">10</button>
+            </div>
+          </div>
+
+          <div class="calculation-summary-box">
+            <div class="calc-line">
+              <span id="modal-calc-math">4 PAX × ₱228</span>
+              <strong id="modal-calc-total">₱912.00</strong>
+            </div>
+            <div class="time-limit-note">
+              ⏱️ Includes <strong>2-Hour Unlimited Dining</strong> from order placement.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-cancel-pax">Cancel</button>
+          <button class="btn btn-primary btn-lg" id="btn-confirm-pax">Add Plan to Order</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 2: Payment & Settle Bill -->
+    <div class="modal-overlay" id="payment-modal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Payment & Settlement</h3>
+          <button class="modal-close" id="btn-close-pay-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="payment-summary-box">
+            <div class="pay-detail-row">
+              <span>Order Number:</span>
+              <strong id="pay-modal-order-no">#0001</strong>
+            </div>
+            <div class="pay-detail-row">
+              <span>Table & Waiter:</span>
+              <strong id="pay-modal-table-waiter">Table 1 (Staff)</strong>
+            </div>
+            <div class="pay-detail-row" id="pay-modal-prev-row" style="display: none;">
+              <span>Previously Paid:</span>
+              <span class="text-success" id="pay-modal-prev-paid">₱0.00</span>
+            </div>
+            <div class="pay-total-banner">
+              <span class="label">BALANCE DUE</span>
+              <span class="amount" id="pay-modal-total-due">₱0.00</span>
+            </div>
+          </div>
+
+          <div class="pay-form-group">
+            <label for="cash-tendered-input">Cash Tendered (₱):</label>
+            <input type="number" id="cash-tendered-input" placeholder="Enter amount received" step="any">
+            
+            <div class="quick-cash-buttons">
+              <button type="button" class="cash-chip" id="btn-exact-cash">Exact</button>
+              <button type="button" class="cash-chip" data-cash="500">₱500</button>
+              <button type="button" class="cash-chip" data-cash="1000">₱1,000</button>
+              <button type="button" class="cash-chip" data-cash="1500">₱1,500</button>
+              <button type="button" class="cash-chip" data-cash="2000">₱2,000</button>
+            </div>
+          </div>
+
+          <div class="change-display-box">
+            <span class="change-label">Change to Return:</span>
+            <span class="change-value" id="pay-modal-change">₱0.00</span>
+          </div>
+
+          <div class="pay-method-selector">
+            <label>Payment Method:</label>
+            <div class="method-options">
+              <label class="radio-label">
+                <input type="radio" name="pay-method" value="Cash" checked> Cash
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="pay-method" value="GCash"> GCash
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="pay-method" value="Maya"> Maya
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="pay-method" value="Card"> Card
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-cancel-pay">Cancel</button>
+          <button class="btn btn-success btn-lg" id="btn-confirm-payment">✓ Confirm & Settle</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 3: Add / Edit Menu Item (Admin) -->
+    <div class="modal-overlay" id="add-item-modal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="modal-menu-title">Add New Menu Item</h3>
+          <button class="modal-close" id="btn-close-add-item-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="edit-item-id">
+          <div class="form-group">
+            <label for="new-item-name">Item / Plan Name:</label>
+            <input type="text" id="new-item-name" placeholder="e.g. Unli Premium Pork">
+          </div>
+          <div class="form-group">
+            <label for="new-item-cat">Category:</label>
+            <select id="new-item-cat">
+              <option value="UNLIMITED">UNLIMITED</option>
+              <option value="CHICKEN WINGS">CHICKEN WINGS</option>
+              <option value="VALUE MEAL">VALUE MEAL</option>
+              <option value="ALA CARTE / DRINKS / OTHERS" selected>ALA CARTE / DRINKS / OTHERS</option>
+              <option value="LEFTOVER CHARGES">LEFTOVER CHARGES</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="new-item-price">Price (₱):</label>
+            <input type="number" id="new-item-price" placeholder="e.g. 299" step="any">
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="new-item-unli"> Is Unlimited Package (Rate per PAX)
+            </label>
+          </div>
+          <div class="form-row" id="new-item-stock-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label for="new-item-stock">Initial Stock Quantity:</label>
+              <input type="number" id="new-item-stock" placeholder="e.g. 50" value="0" step="any">
+            </div>
+            <div class="form-group">
+              <label for="new-item-unit">Stock Unit:</label>
+              <select id="new-item-unit">
+                <option value="pcs" selected>pcs (Pieces/Bottles/Cans)</option>
+                <option value="kg">kg (Kilograms)</option>
+                <option value="grams">grams (Grams)</option>
+                <option value="packs">packs (Packs)</option>
+                <option value="servings">servings (Servings)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="new-item-desc">Description (Optional):</label>
+            <input type="text" id="new-item-desc" placeholder="e.g. Includes sides and 2h limit">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-cancel-add-item">Cancel</button>
+          <button class="btn btn-primary" id="btn-save-new-item">Save Menu Item</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 4: Adjust / Add Inventory Stock -->
+    <div class="modal-overlay" id="adjust-stock-modal">
+      <div class="modal-card" style="max-width: 420px;">
+        <div class="modal-header">
+          <h3 id="stock-modal-title">Adjust Inventory Stock</h3>
+          <button class="modal-close" id="btn-close-stock-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="stock-item-id">
+          <div class="form-group">
+            <label for="stock-item-name">Item / Material Name:</label>
+            <input type="text" id="stock-item-name" placeholder="e.g. Pork Belly (Raw Meat)" required>
+          </div>
+          <div class="form-group">
+            <label for="stock-item-cat">Category:</label>
+            <select id="stock-item-cat">
+              <option value="MEAT">MEAT</option>
+              <option value="DRINKS">DRINKS</option>
+              <option value="SIDES">SIDES</option>
+              <option value="ALA CARTE">ALA CARTE</option>
+              <option value="DESSERT">DESSERT</option>
+              <option value="GENERAL">GENERAL</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="stock-qty-input">Current Stock Quantity:</label>
+            <input type="number" id="stock-qty-input" placeholder="e.g. 25000" step="any" required>
+          </div>
+          <div class="form-group">
+            <label for="stock-unit-select">Unit of Measurement:</label>
+            <select id="stock-unit-select">
+              <option value="kg">kg (kilograms)</option>
+              <option value="pcs">pcs</option>
+              <option value="grams">grams (g)</option>
+              <option value="cans">cans</option>
+              <option value="cups">cups</option>
+              <option value="pitchers">pitchers</option>
+              <option value="bowls">bowls</option>
+              <option value="scoops">scoops</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="stock-min-threshold">Low Stock Warning Threshold:</label>
+            <input type="number" id="stock-min-threshold" value="10" step="any">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-cancel-stock">Cancel</button>
+          <button class="btn btn-primary" id="btn-save-stock">Save Stock Level</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 5: Change Password -->
+    <div class="modal-overlay" id="change-pwd-modal">
+      <div class="modal-card" style="max-width: 380px;">
+        <div class="modal-header">
+          <h3>🔑 Change Account Password</h3>
+          <button class="modal-close" id="btn-close-pwd-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group" id="pwd-old-group">
+            <label for="pwd-old-input">Current Password:</label>
+            <input type="password" id="pwd-old-input" placeholder="Enter current password">
+          </div>
+          <div class="form-group">
+            <label for="pwd-new-input">New Password (min 8 chars):</label>
+            <input type="password" id="pwd-new-input" placeholder="Enter new password" minlength="8" required>
+          </div>
+          <div class="form-group">
+            <label for="pwd-confirm-input">Confirm New Password:</label>
+            <input type="password" id="pwd-confirm-input" placeholder="Repeat new password" minlength="8" required>
+          </div>
+          <div class="login-error" id="pwd-modal-error" role="alert"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-cancel-pwd">Cancel</button>
+          <button class="btn btn-primary" id="btn-save-pwd">Update Password</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 6: Read-Only Completed Receipt Viewer -->
+    <div class="modal-overlay" id="receipt-modal">
+      <div class="modal-card" style="max-width: 420px;">
+        <div class="modal-header">
+          <h3>Official Order Slip / Receipt</h3>
+          <button class="modal-close" id="btn-close-receipt-modal">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 1rem;">
+          <div class="slip-container" id="modal-receipt-content" style="border: 1px solid #e2e8f0; border-radius: 8px;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-close-receipt">Close</button>
+          <button class="btn btn-primary" id="btn-reprint-receipt">🖨️ Print Receipt</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 7: Admin PIN Unlock -->
+    <div class="modal-overlay" id="admin-pin-modal">
+      <div class="modal-card" style="max-width: 360px;">
+        <div class="modal-header">
+          <h3>🔐 Admin Access Required</h3>
+          <button class="modal-close" id="btn-close-pin-modal">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 1.25rem;">
+          <p style="color: #64748b; margin-bottom: 1rem; font-size: 0.9rem;">Enter the Admin PIN or password to unlock admin authority (Menu, Pricing, Stocks &amp; Accounts).</p>
+          <input type="password" id="admin-pin-input" class="pin-input" placeholder="Admin PIN / Password" autocomplete="off">
+          <div class="pin-keypad">
+            <button class="keypad-btn" data-digit="1">1</button>
+            <button class="keypad-btn" data-digit="2">2</button>
+            <button class="keypad-btn" data-digit="3">3</button>
+            <button class="keypad-btn" data-digit="4">4</button>
+            <button class="keypad-btn" data-digit="5">5</button>
+            <button class="keypad-btn" data-digit="6">6</button>
+            <button class="keypad-btn" data-digit="7">7</button>
+            <button class="keypad-btn" data-digit="8">8</button>
+            <button class="keypad-btn" data-digit="9">9</button>
+            <button class="keypad-btn keypad-clear" id="keypad-clear">⌫</button>
+            <button class="keypad-btn" data-digit="0">0</button>
+            <button class="keypad-btn keypad-enter" id="keypad-enter">✓</button>
+          </div>
+          <div class="login-error" id="pin-modal-error" role="alert"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-cancel-pin-modal">Cancel</button>
+          <button class="btn btn-primary" id="btn-confirm-pin">🔓 Unlock Admin</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast"></div>
+
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
